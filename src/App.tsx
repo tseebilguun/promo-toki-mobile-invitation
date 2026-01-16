@@ -2,6 +2,7 @@ import { Box, Button, Container, HStack, Image, Stack, Text } from "@chakra-ui/r
 
 import banner from "./assets/banner.webp"
 import avatar from "./assets/avatar.svg"
+import btnAdd from "./assets/btn_add.svg"
 
 const inviteRows = Array.from({ length: 5 }, (_, i) => ({ id: i }))
 
@@ -11,7 +12,13 @@ export default function App() {
     }
 
     return (
-        <Box minH="100vh" bg="appBg" pt="env(safe-area-inset-top)">
+        <Box
+            minH="100dvh"
+            bg="appBg"
+            pt="env(safe-area-inset-top)"
+            display="flex"
+            flexDirection="column"
+        >
             {/* main content spacing */}
             <Container px="18px" pt="96px" maxW="md">
                 {/* Top banner card */}
@@ -27,15 +34,15 @@ export default function App() {
                     />
 
                     <Box pt="14px">
-                        <Text color="mutedText" fontWeight="400" fontSize="18px" mb="6px">
+                        <Text color="mutedText" fontWeight="400" fontSize="12px" mb="6px">
                             Найзаа уриад
                         </Text>
 
-                        <Text color="white" fontWeight="500" fontSize="34px" lineHeight="1.15" mb="10px">
+                        <Text color="white" fontWeight="500" fontSize="20px" lineHeight="1.15" mb="10px">
                             Датагаа 3 үржүүлээд ав
                         </Text>
 
-                        <Text color="mutedText" fontWeight="400" fontSize="18px" lineHeight="1.4">
+                        <Text color="mutedText" fontWeight="400" fontSize="14px" lineHeight="1.4">
                             Toki Mobile-д найзуудaa уриад хүссэн датагаа авах бүрдээ датагаа 3 үржүүлээрэй.
                         </Text>
                     </Box>
@@ -44,26 +51,21 @@ export default function App() {
 
             {/* Bottom sheet */}
             <Box
-                mt="18px"
+                mt="auto" // push to bottom, no gap
                 bg="#f5f5fa"
                 borderTopRadius="sheet"
                 px="18px"
                 pt="18px"
                 pb="calc(18px + env(safe-area-inset-bottom))"
             >
-                <Text color="appBg" fontWeight="500" fontSize="26px" mb="14px">
+                <Text color="appBg" fontWeight="500" fontSize="16px" mb="14px">
                     Миний урьсан
                 </Text>
 
                 <Box bg="white" borderRadius="inner" p="14px">
                     <Stack gap="0">
-                        {inviteRows.map((row, idx) => (
-                            <HStack
-                                key={row.id}
-                                h="86px"
-                                justify="space-between"
-                                borderTop={idx === 0 ? "none" : "1px solid rgba(34, 37, 45, 0.06)"}
-                            >
+                        {inviteRows.map((row) => (
+                            <HStack key={row.id} h="76px" justify="space-between">
                                 <HStack gap="14px">
                                     <Image
                                         src={avatar}
@@ -74,7 +76,7 @@ export default function App() {
                                         opacity={0.7}
                                         pointerEvents="none"
                                     />
-                                    <Text color="#101318" fontWeight="400" fontSize="22px">
+                                    <Text color="#101318" fontWeight="400" fontSize="16px">
                                         Найзаа урих
                                     </Text>
                                 </HStack>
@@ -86,14 +88,21 @@ export default function App() {
                                     w="44px"
                                     h="44px"
                                     minW="44px"
-                                    fontSize="36px"
-                                    lineHeight="44px"
                                     p="0"
-                                    color="mutedText"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
                                     _hover={{ bg: "transparent" }}
                                     _active={{ bg: "transparent" }}
                                 >
-                                    +
+                                    <Image
+                                        src={btnAdd}
+                                        alt="Add"
+                                        draggable={false}
+                                        pointerEvents="none"
+                                        w="24px"
+                                        h="24px"
+                                    />
                                 </Button>
                             </HStack>
                         ))}

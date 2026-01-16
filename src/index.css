@@ -11,6 +11,7 @@ body {
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
     height: 100%;
+    font-size: clamp(14px, 3.5vw, 16px);
 }
 
 /* Prevent iOS text size auto-adjust */
@@ -33,3 +34,4 @@ body::before {
     z-index: 9999;
     pointer-events: none;
 }
+
