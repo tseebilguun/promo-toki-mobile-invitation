@@ -1,0 +1,51 @@
+/* -------------- Global Reset / Mobile hardening -------------- */
+
+:root {
+    color-scheme: light;
+}
+
+/* Disable iOS callout (save/copy image), selection, tap highlight */
+html,
+body {
+    -webkit-touch-callout: none; /* iOS: disable callout menu on long press */
+    -webkit-user-select: none;   /* iOS/Safari */
+    user-select: none;           /* modern browsers */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    height: 100%;
+}
+
+/* Allow selection only where you explicitly want it (optional) */
+/* .selectable { user-select: text; -webkit-user-select: text; } */
+
+img,
+a,
+button {
+    -webkit-touch-callout: none;
+}
+
+/* Prevent iOS text size auto-adjust */
+body {
+    -webkit-text-size-adjust: 100%;
+}
+
+/* -------------- Global font -------------- */
+body {
+    margin: 0;
+    font-family: "Rubik", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: #22252d; /* also matches your screen background */
+}
+
+/* -------------- Status bar / top safe-area color -------------- */
+/* This paints the iPhone notch/top safe-area area */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: #22252d;
+    z-index: 9999;
+    pointer-events: none;
+}
