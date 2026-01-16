@@ -225,10 +225,16 @@ export default function App() {
 
                                     <Input
                                         value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
+                                        onChange={(e) => {
+                                            // keep digits only
+                                            const digitsOnly = e.target.value.replace(/\D/g, "")
+                                            setPhone(digitsOnly)
+                                        }}
                                         variant="unstyled"
-                                        inputMode="tel"
+                                        type="tel"
+                                        inputMode="numeric"
                                         autoComplete="tel"
+                                        pattern="[0-9]*"
                                         fontSize="16px"
                                         lineHeight="1.2"
                                         color="#101318"
