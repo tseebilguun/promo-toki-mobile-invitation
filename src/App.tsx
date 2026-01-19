@@ -1,21 +1,111 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Box, Button, Container, Drawer, HStack, Image, Input, Stack, Text } from "@chakra-ui/react"
 
 import banner from "./assets/banner.webp"
 import avatar from "./assets/avatar.svg"
 import btnAdd from "./assets/btn_add.svg"
-
-const inviteRows = Array.from({ length: 5 }, (_, i) => ({ id: i }))
+import btnDelete from "./assets/btn_delete.svg"
 
 const DRAG_CLOSE_DISTANCE = 60
 const DRAG_CLOSE_VELOCITY = 0.5 // px/ms
 const MAX_DRAG = 140
 
+interface InviteData {
+    id: string
+    invitedNumber: string
+    newNumber:  string | null
+    status: "Амжилттай" | "Урилга илгээсэн" | "Хугацаа дууссан"
+    operatorName: string
+    expireDate:  string
+}
+
+interface ApiResponse {
+    result: "success" | "fail"
+    message: string
+    data: InviteData[] | null
+}
+
+// Dummy API response
+const DUMMY_RESPONSE: ApiResponse = {
+    result: "success",
+    message: "",
+    data: [
+        {
+            id: "82312",
+            invitedNumber: "89115441",
+            newNumber: "55150010",
+            status: "Амжилттай",
+            operatorName: "Юнител",
+            expireDate: "2026-03-31T23:59:59",
+        },
+        {
+            id: "82313",
+            invitedNumber: "88547020",
+            newNumber: null,
+            status: "Урилга илгээсэн",
+            operatorName: "Юнител",
+            expireDate: "2026-01-20T23:59:59",
+        },
+        {
+            id: "82314",
+            invitedNumber: "88547020",
+            newNumber: null,
+            status: "Хугацаа дууссан",
+            operatorName: "Юнител",
+            expireDate: "2026-01-12T23:59:59",
+        },
+    ],
+}
+
 export default function App() {
     const [open, setOpen] = useState(false)
     const [phone, setPhone] = useState("")
+    const [invites, setInvites] = useState<InviteData[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     const isSendEnabled = useMemo(() => phone.trim().length > 0, [phone])
+
+    // Get tokiId from URL and fetch data (dummy for now)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const tokiId = params.get("tokiId")
+
+        if (! tokiId) {
+            setError("tokiId not found in URL")
+            setLoading(false)
+            return
+        }
+
+        // Simulate API call with dummy response
+        setTimeout(() => {
+            const data = DUMMY_RESPONSE
+
+            if (data.result === "success" && data.data) {
+                setInvites(data.data)
+            } else {
+                setError(data.message || "Failed to load invites")
+            }
+            setLoading(false)
+        }, 500) // 500ms delay to simulate network
+
+        // TODO: Replace with real API call later:
+        // fetch(`https://your-api.com/invites? tokiId=${tokiId}`)
+        //     .then((res) => res.json())
+        //     .then((data: ApiResponse) => {
+        //         if (data.result === "success" && data.data) {
+        //             setInvites(data.data)
+        //         } else {
+        //             setError(data.message || "Failed to load invites")
+        //         }
+        //     })
+        //     .catch((err) => {
+        //         setError(err.message)
+        //     })
+        //     .finally(() => {
+        //         setLoading(false)
+        //     })
+    }, [])
 
     const onAdd = () => setOpen(true)
 
@@ -25,7 +115,15 @@ export default function App() {
     }
 
     const onSend = () => {
-        alert(`Send invite to: ${phone}`)
+        alert(`Send invite to:  ${phone}`)
+    }
+
+    const onResend = (id: string) => {
+        alert(`Resend invitation for ID: ${id}`)
+    }
+
+    const onDelete = (id: string) => {
+        alert(`Delete invitation for ID: ${id}`)
     }
 
     // ---- drag refs ----
@@ -36,11 +134,9 @@ export default function App() {
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         e.currentTarget.setPointerCapture(e.pointerId)
-
         startY.current = e.clientY
         currentY.current = 0
         lastMove.current = { y: e.clientY, time: performance.now() }
-
         if (sheetRef.current) {
             sheetRef.current.style.transition = "none"
         }
@@ -49,12 +145,9 @@ export default function App() {
     const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
         const rawDelta = e.clientY - startY.current
         if (rawDelta <= 0) return
-
         const delta = rawDelta > MAX_DRAG ? MAX_DRAG + (rawDelta - MAX_DRAG) * 0.3 : rawDelta
-
         currentY.current = delta
         lastMove.current = { y: e.clientY, time: performance.now() }
-
         if (sheetRef.current) {
             sheetRef.current.style.transform = `translateY(${delta}px)`
         }
@@ -65,19 +158,31 @@ export default function App() {
         const dt = now - lastMove.current.time
         const dy = e.clientY - lastMove.current.y
         const velocity = dt > 0 ? dy / dt : 0
-
         const shouldClose = currentY.current > DRAG_CLOSE_DISTANCE || velocity > DRAG_CLOSE_VELOCITY
-
         if (sheetRef.current) {
             sheetRef.current.style.transition = "transform 180ms ease"
             sheetRef.current.style.transform = "translateY(0px)"
         }
-
         currentY.current = 0
-
         if (shouldClose) onClose()
     }
     // -------------------
+
+    // Empty slots to always show 5 rows
+    const displayRows = useMemo(() => {
+        const rows = [...invites]
+        while (rows.length < 5) {
+            rows.push({
+                id: `empty-${rows.length}`,
+                invitedNumber: "",
+                newNumber: null,
+                status: "Урилга илгээсэн",
+                operatorName: "",
+                expireDate: "",
+            })
+        }
+        return rows.slice(0, 5)
+    }, [invites])
 
     return (
         <>
@@ -88,9 +193,7 @@ export default function App() {
                 display="flex"
                 flexDirection="column"
             >
-                {/* main content spacing */}
-                <Container px="18px" pt="96px" maxW="md">
-                    {/* Top banner card */}
+                <Container px="18px" pt="96px" pb="18px" maxW="md">
                     <Box bg="cardBg" borderRadius="banner" p="18px">
                         <Image
                             src={banner}
@@ -118,7 +221,6 @@ export default function App() {
                     </Box>
                 </Container>
 
-                {/* Bottom sheet */}
                 <Box
                     mt="auto"
                     bg="#f5f5fa"
@@ -131,56 +233,32 @@ export default function App() {
                         Миний урьсан
                     </Text>
 
-                    <Box bg="white" borderRadius="inner" p="14px">
-                        <Stack gap="0">
-                            {inviteRows.map((row) => (
-                                <HStack key={row.id} h="76px" justify="space-between">
-                                    <HStack gap="14px">
-                                        <Image
-                                            src={avatar}
-                                            alt=""
-                                            draggable={false}
-                                            w="48px"
-                                            h="48px"
-                                            opacity={0.7}
-                                            pointerEvents="none"
-                                        />
-                                        <Text color="#101318" fontWeight="400" fontSize="16px">
-                                            Найзаа урих
-                                        </Text>
-                                    </HStack>
-
-                                    <Button
-                                        variant="ghost"
-                                        aria-label="Add"
-                                        onClick={onAdd}
-                                        w="44px"
-                                        h="44px"
-                                        minW="44px"
-                                        p="0"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        _hover={{ bg: "transparent" }}
-                                        _active={{ bg: "transparent" }}
-                                    >
-                                        <Image
-                                            src={btnAdd}
-                                            alt="Add"
-                                            draggable={false}
-                                            pointerEvents="none"
-                                            w="24px"
-                                            h="24px"
-                                        />
-                                    </Button>
-                                </HStack>
-                            ))}
-                        </Stack>
+                    <Box bg="white" borderRadius="inner" px="14px">
+                        {loading ?  (
+                            <Box py="40px" textAlign="center">
+                                <Text color="#6F7381">Loading...</Text>
+                            </Box>
+                        ) : error ? (
+                            <Box py="40px" textAlign="center">
+                                <Text color="#E53E3E">{error}</Text>
+                            </Box>
+                        ) : (
+                            <Stack gap="0">
+                                {displayRows.map((row) => (
+                                    <InviteRow
+                                        key={row.id}
+                                        data={row}
+                                        onAdd={onAdd}
+                                        onResend={onResend}
+                                        onDelete={onDelete}
+                                    />
+                                ))}
+                            </Stack>
+                        )}
                     </Box>
                 </Box>
             </Box>
 
-            {/* Drawer overlays on top of the sheet */}
             <Drawer.Root open={open} onOpenChange={(e) => setOpen(e.open)} placement="bottom">
                 <Drawer.Backdrop />
                 <Drawer.Positioner>
@@ -189,7 +267,6 @@ export default function App() {
 
                         <Drawer.Body px="16px" pt="10px" pb="calc(18px + env(safe-area-inset-bottom))">
                             <Stack gap="12px">
-                                {/* Handle (draggable) */}
                                 <Box
                                     display="flex"
                                     justifyContent="center"
@@ -205,12 +282,10 @@ export default function App() {
                                     <Box w="44px" h="5px" borderRadius="999px" bg="#D9DCE3" />
                                 </Box>
 
-                                {/* Header */}
                                 <Text textAlign="center" fontWeight="500" fontSize="18px">
                                     Найзаа урих
                                 </Text>
 
-                                {/* Input field (compact) */}
                                 <Box
                                     bg="#F3F4F8"
                                     borderRadius="12px"
@@ -226,11 +301,10 @@ export default function App() {
                                     <Input
                                         value={phone}
                                         onChange={(e) => {
-                                            // keep digits only
                                             const digitsOnly = e.target.value.replace(/\D/g, "")
                                             setPhone(digitsOnly)
                                         }}
-                                        variant="unstyled"
+                                        variant="flushed"
                                         type="tel"
                                         inputMode="numeric"
                                         autoComplete="tel"
@@ -249,12 +323,10 @@ export default function App() {
                                     />
                                 </Box>
 
-                                {/* Helper text */}
                                 <Text color="#6F7381" fontWeight="400" fontSize="14px" lineHeight="1.4">
                                     Найзынхаа Toki апп-д бүртгэлтэй дугаарыг оруулна уу.
                                 </Text>
 
-                                {/* space above button */}
                                 <Box pt="20px">
                                     <Button
                                         w="100%"
@@ -265,7 +337,7 @@ export default function App() {
                                         fontWeight="500"
                                         fontSize="16px"
                                         onClick={onSend}
-                                        disabled={!isSendEnabled}
+                                        disabled={! isSendEnabled}
                                         bg={isSendEnabled ? "#101318" : "#EDEDF5"}
                                         color={isSendEnabled ? "#FFFFFF" : "#ABAFBD"}
                                     >
@@ -281,4 +353,172 @@ export default function App() {
             </Drawer.Root>
         </>
     )
+}
+
+// Individual row component
+interface InviteRowProps {
+    data: InviteData
+    onAdd: () => void
+    onResend: (id:  string) => void
+    onDelete: (id: string) => void
+}
+
+function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
+    const [countdown, setCountdown] = useState("")
+
+    // Countdown timer for "Урилга илгээсэн" status
+    useEffect(() => {
+        if (data.status !== "Урилга илгээсэн" || !data.expireDate) return
+
+        const interval = setInterval(() => {
+            const now = new Date().getTime()
+            const expire = new Date(data.expireDate).getTime()
+            const diff = expire - now
+
+            if (diff <= 0) {
+                setCountdown("00:00:00")
+                clearInterval(interval)
+            } else {
+                const hours = Math.floor(diff / (1000 * 60 * 60))
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+                setCountdown(
+                    `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+                )
+            }
+        }, 1000)
+
+        return () => clearInterval(interval)
+    }, [data.status, data.expireDate])
+
+    // Empty row
+    if (! data.invitedNumber) {
+        return (
+            <HStack h="76px" justify="space-between">
+                <HStack gap="14px">
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Text color="#101318" fontWeight="400" fontSize="16px">
+                        Найзаа урих
+                    </Text>
+                </HStack>
+
+                <Button
+                    variant="ghost"
+                    onClick={onAdd}
+                    w="44px"
+                    h="44px"
+                    minW="44px"
+                    p="0"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    _hover={{ bg: "transparent" }}
+                    _active={{ bg: "transparent" }}
+                >
+                    <Image src={btnAdd} w="24px" h="24px" pointerEvents="none" />
+                </Button>
+            </HStack>
+        )
+    }
+
+    // Success status
+    if (data.status === "Амжилттай") {
+        return (
+            <HStack h="76px" justify="space-between" align="center">
+                <HStack gap="14px" flex="1">
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Box flex="1">
+                        <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
+                            {data.newNumber}
+                        </Text>
+                        <Text color="#6F7381" fontWeight="400" fontSize="12px">
+                            {data.operatorName} • {data.invitedNumber}
+                        </Text>
+                    </Box>
+                </HStack>
+
+                <Box
+                    bg="#e6f5e6"
+                    color="#65C466"
+                    px="10px"
+                    py="4px"
+                    borderRadius="999px"
+                    fontSize="12px"
+                    fontWeight="400"
+                >
+                    {data.status}
+                </Box>
+            </HStack>
+        )
+    }
+
+    // Invitation sent status
+    if (data.status === "Урилга илгээсэн") {
+        return (
+            <HStack h="76px" justify="space-between" align="center">
+                <HStack gap="14px" flex="1">
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Box flex="1">
+                        <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
+                            {data.invitedNumber}
+                        </Text>
+                        <Text color="#6F7381" fontWeight="400" fontSize="13px">
+                            {countdown}
+                        </Text>
+                    </Box>
+                </HStack>
+
+                <Box
+                    bg="#fff6d6"
+                    color="#FFC800"
+                    px="10px"
+                    py="4px"
+                    borderRadius="999px"
+                    fontSize="12px"
+                    fontWeight="400"
+                >
+                    {data.status}
+                </Box>
+            </HStack>
+        )
+    }
+
+    // Expired status
+    if (data.status === "Хугацаа дууссан") {
+        return (
+            <HStack h="76px" justify="space-between" align="center">
+                <HStack gap="14px" flex="1">
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Box flex="1">
+                        <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
+                            {data.invitedNumber}
+                        </Text>
+                        <Text color="#6F7381" fontWeight="400" fontSize="13px">
+                            00:00:00
+                        </Text>
+                    </Box>
+                </HStack>
+
+                <HStack gap="8px">
+                    <Button
+                        size="sm"
+                        h="32px"
+                        px="12px"
+                        fontSize="13px"
+                        fontWeight="500"
+                        bg="#F5F5FA"
+                        color="#22252D"
+                        borderRadius="6px"
+                        onClick={() => onResend(data.id)}
+                        _hover={{ bg: "#E0E0E8" }}
+                    >
+                        Дахин илгээх
+                    </Button>
+                    <Image src={btnDelete} w="24px" h="24px" pointerEvents="none" />
+                </HStack>
+            </HStack>
+        )
+    }
+
+    return null
 }
