@@ -444,7 +444,7 @@ function EntitlementCard({ expirationDate, successCount }: EntitlementCardProps)
                     <Image src={bonus} draggable={false} pointerEvents="none" />
                     <Box flex="1">
                         <Text color="#6F7381" fontWeight="400" fontSize="12px">
-                            Дата 3Х үржигдэх хугацаа
+                            Дата x3 үржигдэх хугацаа
                         </Text>
                         <Text color="#22252D" fontWeight="500" fontSize="16px">
                             {countdown}
