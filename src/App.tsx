@@ -1,10 +1,11 @@
-import {useEffect, useMemo, useRef, useState} from "react"
-import {Box, Button, Container, Drawer, HStack, Image, Input, Stack, Text} from "@chakra-ui/react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Box, Button, Container, Drawer, HStack, Image, Input, Stack, Text } from "@chakra-ui/react"
 
 import banner from "./assets/banner.webp"
 import avatar from "./assets/avatar.svg"
 import btnAdd from "./assets/btn_add.svg"
 import btnDelete from "./assets/btn_delete.svg"
+import bonus from "./assets/bonus.svg"
 
 const DRAG_CLOSE_DISTANCE = 60
 const DRAG_CLOSE_VELOCITY = 0.5 // px/ms
@@ -14,53 +15,82 @@ interface InviteData {
     id: string
     invitedNumber: string
     newNumber: string | null
-    status: "Амжилттай" | "Урилга илгээсэн" | "Хугацаа дууссан"
+    status: "SUCCESS" | "SENT" | "EXPIRED"
     operatorName: string
     expireDate: string
 }
 
+interface ApiResponseData {
+    referrals: InviteData[]
+    hasActiveEntitlement: boolean
+    successReferralsCount: number
+    entitlementExpirationDate: string
+}
+
 interface ApiResponse {
-    result: "success" | "fail"
+    result: "Success" | "Fail"
     message: string
-    data: InviteData[] | null
+    data: ApiResponseData | null
 }
 
 // Dummy API response
 const DUMMY_RESPONSE: ApiResponse = {
-    result: "success",
-    message: "",
-    data: [
-        {
-            id: "82312",
-            invitedNumber: "89115441",
-            newNumber: "55150010",
-            status: "Амжилттай",
-            operatorName: "Юнител",
-            expireDate: "2026-03-31T23:59:59",
-        },
-        {
-            id: "82313",
-            invitedNumber: "88547020",
-            newNumber: null,
-            status: "Урилга илгээсэн",
-            operatorName: "Юнител",
-            expireDate: "2026-01-20T23:59:59",
-        },
-        {
-            id: "82314",
-            invitedNumber: "88547020",
-            newNumber: null,
-            status: "Хугацаа дууссан",
-            operatorName: "Юнител",
-            expireDate: "2026-01-12T23:59:59",
-        },
-    ],
+    result: "Success",
+    message: "Fetched existing records",
+    data: {
+        referrals: [
+            {
+                id: "82312",
+                invitedNumber: "89115441",
+                newNumber: "55150010",
+                status: "SUCCESS",
+                operatorName: "Юнител",
+                expireDate: "2026-03-31T23:59:59",
+            },
+            {
+                id: "82313",
+                invitedNumber: "88547020",
+                newNumber: null,
+                status: "SENT",
+                operatorName: "Юнител",
+                expireDate: "2026-01-28T23:59:59",
+            },
+            {
+                id: "82314",
+                invitedNumber: "88547021",
+                newNumber: null,
+                status: "EXPIRED",
+                operatorName: "Юнител",
+                expireDate: "2026-01-12T23:59:59",
+            },
+        ],
+        hasActiveEntitlement: true,
+        successReferralsCount: 1,
+        entitlementExpirationDate: "2026-02-25T00:00:00",
+    },
+}
+
+// Map API status to display status
+const mapStatus = (status: string): "Амжилттай" | "Урилга илгээсэн" | "Хугацаа дууссан" => {
+    switch (status) {
+        case "SUCCESS":
+            return "Амжилттай"
+        case "SENT":
+            return "Урилга илгээсэн"
+        case "EXPIRED":
+            return "Хугацаа дууссан"
+        default:
+            return "Урилга илгээсэн"
+    }
 }
 
 export default function App() {
     const [open, setOpen] = useState(false)
     const [phone, setPhone] = useState("")
     const [invites, setInvites] = useState<InviteData[]>([])
+    const [hasActiveEntitlement, setHasActiveEntitlement] = useState(false)
+    const [successReferralsCount, setSuccessReferralsCount] = useState(0)
+    const [entitlementExpirationDate, setEntitlementExpirationDate] = useState("")
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
@@ -79,24 +109,30 @@ export default function App() {
 
         // Simulate API call with dummy response
         setTimeout(() => {
-            const data = DUMMY_RESPONSE
+            const response = DUMMY_RESPONSE
 
-            if (data.result === "success" && data.data) {
-                setInvites(data.data)
+            if (response.result === "Success" && response.data) {
+                setInvites(response.data.referrals)
+                setHasActiveEntitlement(response.data.hasActiveEntitlement)
+                setSuccessReferralsCount(response.data.successReferralsCount)
+                setEntitlementExpirationDate(response.data.entitlementExpirationDate)
             } else {
-                setError(data.message || "Failed to load invites")
+                setError(response.message || "Failed to load invites")
             }
             setLoading(false)
         }, 500) // 500ms delay to simulate network
 
         // TODO: Replace with real API call later:
-        // fetch(`https://your-api.com/invites? tokiId=${tokiId}`)
+        // fetch(`https://your-api.com/invites?tokiId=${tokiId}`)
         //     .then((res) => res.json())
-        //     .then((data: ApiResponse) => {
-        //         if (data.result === "success" && data.data) {
-        //             setInvites(data.data)
+        //     .then((response: ApiResponse) => {
+        //         if (response.result === "Success" && response.data) {
+        //             setInvites(response.data.referrals)
+        //             setHasActiveEntitlement(response.data.hasActiveEntitlement)
+        //             setSuccessReferralsCount(response.data.successReferralsCount)
+        //             setEntitlementExpirationDate(response.data.entitlementExpirationDate)
         //         } else {
-        //             setError(data.message || "Failed to load invites")
+        //             setError(response.message || "Failed to load invites")
         //         }
         //     })
         //     .catch((err) => {
@@ -115,7 +151,7 @@ export default function App() {
     }
 
     const onSend = () => {
-        alert(`Send invite to:  ${phone}`)
+        alert(`Send invite to: ${phone}`)
     }
 
     const onResend = (id: string) => {
@@ -130,13 +166,13 @@ export default function App() {
     const sheetRef = useRef<HTMLDivElement | null>(null)
     const startY = useRef(0)
     const currentY = useRef(0)
-    const lastMove = useRef({y: 0, time: 0})
+    const lastMove = useRef({ y: 0, time: 0 })
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         e.currentTarget.setPointerCapture(e.pointerId)
         startY.current = e.clientY
         currentY.current = 0
-        lastMove.current = {y: e.clientY, time: performance.now()}
+        lastMove.current = { y: e.clientY, time: performance.now() }
         if (sheetRef.current) {
             sheetRef.current.style.transition = "none"
         }
@@ -147,7 +183,7 @@ export default function App() {
         if (rawDelta <= 0) return
         const delta = rawDelta > MAX_DRAG ? MAX_DRAG + (rawDelta - MAX_DRAG) * 0.3 : rawDelta
         currentY.current = delta
-        lastMove.current = {y: e.clientY, time: performance.now()}
+        lastMove.current = { y: e.clientY, time: performance.now() }
         if (sheetRef.current) {
             sheetRef.current.style.transform = `translateY(${delta}px)`
         }
@@ -176,7 +212,7 @@ export default function App() {
                 id: `empty-${rows.length}`,
                 invitedNumber: "",
                 newNumber: null,
-                status: "Урилга илгээсэн",
+                status: "SENT",
                 operatorName: "",
                 expireDate: "",
             })
@@ -229,6 +265,14 @@ export default function App() {
                     pt="18px"
                     pb="calc(18px + env(safe-area-inset-bottom))"
                 >
+                    {/* Entitlement card - show only if hasActiveEntitlement is true */}
+                    {hasActiveEntitlement && (
+                        <EntitlementCard
+                            expirationDate={entitlementExpirationDate}
+                            successCount={successReferralsCount}
+                        />
+                    )}
+
                     <Text color="appBg" fontWeight="500" fontSize="16px" mb="14px">
                         Миний урьсан
                     </Text>
@@ -260,10 +304,10 @@ export default function App() {
             </Box>
 
             <Drawer.Root open={open} onOpenChange={(e) => setOpen(e.open)} placement="bottom">
-                <Drawer.Backdrop/>
+                <Drawer.Backdrop />
                 <Drawer.Positioner>
                     <Drawer.Content ref={sheetRef} bg="#ffffff" color="#101318" borderTopRadius="sheet">
-                        <Drawer.CloseTrigger onClick={onClose}/>
+                        <Drawer.CloseTrigger onClick={onClose} />
 
                         <Drawer.Body px="16px" pt="10px" pb="calc(18px + env(safe-area-inset-bottom))">
                             <Stack gap="12px">
@@ -279,7 +323,7 @@ export default function App() {
                                     touchAction="none"
                                     cursor="grab"
                                 >
-                                    <Box w="44px" h="5px" borderRadius="999px" bg="#D9DCE3"/>
+                                    <Box w="44px" h="5px" borderRadius="999px" bg="#D9DCE3" />
                                 </Box>
 
                                 <Text textAlign="center" fontWeight="500" fontSize="18px">
@@ -304,7 +348,7 @@ export default function App() {
                                             const digitsOnly = e.target.value.replace(/\D/g, "")
                                             setPhone(digitsOnly)
                                         }}
-                                        variant="unstyled"
+                                        variant="flushed"
                                         type="tel"
                                         inputMode="numeric"
                                         autoComplete="tel"
@@ -319,7 +363,7 @@ export default function App() {
                                         h="auto"
                                         minH="0"
                                         display="block"
-                                        style={{textIndent: 0}}
+                                        style={{ textIndent: 0 }}
                                     />
                                 </Box>
 
@@ -355,6 +399,77 @@ export default function App() {
     )
 }
 
+// Entitlement Card Component
+interface EntitlementCardProps {
+    expirationDate: string
+    successCount: number
+}
+
+function EntitlementCard({ expirationDate, successCount }: EntitlementCardProps) {
+    const [countdown, setCountdown] = useState("")
+
+    useEffect(() => {
+        if (!expirationDate) return
+
+        const interval = setInterval(() => {
+            const now = new Date().getTime()
+            const expire = new Date(expirationDate).getTime()
+            const diff = expire - now
+
+            if (diff <= 0) {
+                setCountdown("0 өдөр 00:00:00")
+                clearInterval(interval)
+            } else {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+                setCountdown(
+                    `${days} өдөр ${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+                        2,
+                        "0"
+                    )}:${String(seconds).padStart(2, "0")}`
+                )
+            }
+        }, 1000)
+
+        return () => clearInterval(interval)
+    }, [expirationDate])
+
+    return (
+        <Box bg="#22252D" borderRadius="14px" p="2px" mb="14px">
+            {/* Inner white card */}
+            <Box bg="#FFFFFF" borderRadius="12px" p="14px">
+                <HStack gap="12px" mb="12px">
+                    <Image src={bonus} draggable={false} pointerEvents="none" />
+                    <Box flex="1">
+                        <Text color="#6F7381" fontWeight="400" fontSize="12px">
+                            Дата 3Х үржигдэх хугацаа
+                        </Text>
+                        <Text color="#22252D" fontWeight="500" fontSize="16px">
+                            {countdown}
+                        </Text>
+                    </Box>
+                </HStack>
+
+                <Text color="#6F7381" fontWeight="400" fontSize="12px" lineHeight="1.4">
+                    Найзаа урих бүрд урамшууллын хугацаа 30 хоногоор нэмэгдэнэ.
+                </Text>
+            </Box>
+
+            {/* Bottom section - Амжилттай урьсан */}
+            <HStack px="14px" py="5px" justify="space-between" align="center">
+                <Text color="#FFFFFF" fontWeight="400" fontSize="12px">
+                    Амжилттай урьсан
+                </Text>
+                <Text color="#FFFFFF" fontWeight="500" fontSize="12px">
+                    {successCount}/5
+                </Text>
+            </HStack>
+        </Box>
+    )
+}
+
 // Individual row component
 interface InviteRowProps {
     data: InviteData
@@ -363,12 +478,12 @@ interface InviteRowProps {
     onDelete: (id: string) => void
 }
 
-function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
+function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
     const [countdown, setCountdown] = useState("")
 
-    // Countdown timer for "Урилга илгээсэн" status
+    // Countdown timer for "SENT" status
     useEffect(() => {
-        if (data.status !== "Урилга илгээсэн" || !data.expireDate) return
+        if (data.status !== "SENT" || !data.expireDate) return
 
         const interval = setInterval(() => {
             const now = new Date().getTime()
@@ -383,7 +498,9 @@ function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
                 const seconds = Math.floor((diff % (1000 * 60)) / 1000)
                 setCountdown(
-                    `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+                    `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(
+                        seconds
+                    ).padStart(2, "0")}`
                 )
             }
         }, 1000)
@@ -396,7 +513,7 @@ function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
         return (
             <HStack h="76px" justify="space-between">
                 <HStack gap="14px">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
                     <Text color="#101318" fontWeight="400" fontSize="16px">
                         Найзаа урих
                     </Text>
@@ -412,21 +529,21 @@ function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
-                    _hover={{bg: "transparent"}}
-                    _active={{bg: "transparent"}}
+                    _hover={{ bg: "transparent" }}
+                    _active={{ bg: "transparent" }}
                 >
-                    <Image src={btnAdd} w="24px" h="24px" pointerEvents="none"/>
+                    <Image src={btnAdd} w="24px" h="24px" pointerEvents="none" />
                 </Button>
             </HStack>
         )
     }
 
     // Success status
-    if (data.status === "Амжилттай") {
+    if (data.status === "SUCCESS") {
         return (
             <HStack h="76px" justify="space-between" align="center">
                 <HStack gap="14px" flex="1">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
                     <Box flex="1">
                         <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
                             {data.newNumber}
@@ -446,18 +563,18 @@ function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
                     fontSize="12px"
                     fontWeight="400"
                 >
-                    {data.status}
+                    {mapStatus(data.status)}
                 </Box>
             </HStack>
         )
     }
 
     // Invitation sent status
-    if (data.status === "Урилга илгээсэн") {
+    if (data.status === "SENT") {
         return (
             <HStack h="76px" justify="space-between" align="center">
                 <HStack gap="14px" flex="1">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
                     <Box flex="1">
                         <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
                             {data.invitedNumber}
@@ -477,18 +594,18 @@ function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
                     fontSize="12px"
                     fontWeight="400"
                 >
-                    {data.status}
+                    {mapStatus(data.status)}
                 </Box>
             </HStack>
         )
     }
 
     // Expired status
-    if (data.status === "Хугацаа дууссан") {
+    if (data.status === "EXPIRED") {
         return (
             <HStack h="76px" justify="space-between" align="center">
                 <HStack gap="14px" flex="1">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
                     <Box flex="1">
                         <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
                             {data.invitedNumber}
@@ -510,11 +627,11 @@ function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
                         color="#22252D"
                         borderRadius="6px"
                         onClick={() => onResend(data.id)}
-                        _hover={{bg: "#E0E0E8"}}
+                        _hover={{ bg: "#E0E0E8" }}
                     >
                         Дахин илгээх
                     </Button>
-                    <Image src={btnDelete} w="24px" h="24px" pointerEvents="none"/>
+                    <Image src={btnDelete} w="24px" h="24px" pointerEvents="none" />
                 </HStack>
             </HStack>
         )
