@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Box, Button, Container, Drawer, HStack, Image, Input, Stack, Text } from "@chakra-ui/react"
+import {useEffect, useMemo, useRef, useState} from "react"
+import {Box, Button, Container, Drawer, HStack, Image, Input, Stack, Text} from "@chakra-ui/react"
 
 import banner from "./assets/banner.webp"
 import avatar from "./assets/avatar.svg"
@@ -13,10 +13,10 @@ const MAX_DRAG = 140
 interface InviteData {
     id: string
     invitedNumber: string
-    newNumber:  string | null
+    newNumber: string | null
     status: "Амжилттай" | "Урилга илгээсэн" | "Хугацаа дууссан"
     operatorName: string
-    expireDate:  string
+    expireDate: string
 }
 
 interface ApiResponse {
@@ -71,7 +71,7 @@ export default function App() {
         const params = new URLSearchParams(window.location.search)
         const tokiId = params.get("tokiId")
 
-        if (! tokiId) {
+        if (!tokiId) {
             setError("tokiId not found in URL")
             setLoading(false)
             return
@@ -130,13 +130,13 @@ export default function App() {
     const sheetRef = useRef<HTMLDivElement | null>(null)
     const startY = useRef(0)
     const currentY = useRef(0)
-    const lastMove = useRef({ y: 0, time: 0 })
+    const lastMove = useRef({y: 0, time: 0})
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         e.currentTarget.setPointerCapture(e.pointerId)
         startY.current = e.clientY
         currentY.current = 0
-        lastMove.current = { y: e.clientY, time: performance.now() }
+        lastMove.current = {y: e.clientY, time: performance.now()}
         if (sheetRef.current) {
             sheetRef.current.style.transition = "none"
         }
@@ -147,7 +147,7 @@ export default function App() {
         if (rawDelta <= 0) return
         const delta = rawDelta > MAX_DRAG ? MAX_DRAG + (rawDelta - MAX_DRAG) * 0.3 : rawDelta
         currentY.current = delta
-        lastMove.current = { y: e.clientY, time: performance.now() }
+        lastMove.current = {y: e.clientY, time: performance.now()}
         if (sheetRef.current) {
             sheetRef.current.style.transform = `translateY(${delta}px)`
         }
@@ -234,7 +234,7 @@ export default function App() {
                     </Text>
 
                     <Box bg="white" borderRadius="inner" px="14px">
-                        {loading ?  (
+                        {loading ? (
                             <Box py="40px" textAlign="center">
                                 <Text color="#6F7381">Loading...</Text>
                             </Box>
@@ -260,10 +260,10 @@ export default function App() {
             </Box>
 
             <Drawer.Root open={open} onOpenChange={(e) => setOpen(e.open)} placement="bottom">
-                <Drawer.Backdrop />
+                <Drawer.Backdrop/>
                 <Drawer.Positioner>
                     <Drawer.Content ref={sheetRef} bg="#ffffff" color="#101318" borderTopRadius="sheet">
-                        <Drawer.CloseTrigger onClick={onClose} />
+                        <Drawer.CloseTrigger onClick={onClose}/>
 
                         <Drawer.Body px="16px" pt="10px" pb="calc(18px + env(safe-area-inset-bottom))">
                             <Stack gap="12px">
@@ -279,7 +279,7 @@ export default function App() {
                                     touchAction="none"
                                     cursor="grab"
                                 >
-                                    <Box w="44px" h="5px" borderRadius="999px" bg="#D9DCE3" />
+                                    <Box w="44px" h="5px" borderRadius="999px" bg="#D9DCE3"/>
                                 </Box>
 
                                 <Text textAlign="center" fontWeight="500" fontSize="18px">
@@ -304,7 +304,7 @@ export default function App() {
                                             const digitsOnly = e.target.value.replace(/\D/g, "")
                                             setPhone(digitsOnly)
                                         }}
-                                        variant="flushed"
+                                        variant="unstyled"
                                         type="tel"
                                         inputMode="numeric"
                                         autoComplete="tel"
@@ -319,7 +319,7 @@ export default function App() {
                                         h="auto"
                                         minH="0"
                                         display="block"
-                                        style={{ textIndent: 0 }}
+                                        style={{textIndent: 0}}
                                     />
                                 </Box>
 
@@ -337,7 +337,7 @@ export default function App() {
                                         fontWeight="500"
                                         fontSize="16px"
                                         onClick={onSend}
-                                        disabled={! isSendEnabled}
+                                        disabled={!isSendEnabled}
                                         bg={isSendEnabled ? "#101318" : "#EDEDF5"}
                                         color={isSendEnabled ? "#FFFFFF" : "#ABAFBD"}
                                     >
@@ -359,11 +359,11 @@ export default function App() {
 interface InviteRowProps {
     data: InviteData
     onAdd: () => void
-    onResend: (id:  string) => void
+    onResend: (id: string) => void
     onDelete: (id: string) => void
 }
 
-function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
+function InviteRow({data, onAdd, onResend, onDelete}: InviteRowProps) {
     const [countdown, setCountdown] = useState("")
 
     // Countdown timer for "Урилга илгээсэн" status
@@ -392,11 +392,11 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
     }, [data.status, data.expireDate])
 
     // Empty row
-    if (! data.invitedNumber) {
+    if (!data.invitedNumber) {
         return (
             <HStack h="76px" justify="space-between">
                 <HStack gap="14px">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
                     <Text color="#101318" fontWeight="400" fontSize="16px">
                         Найзаа урих
                     </Text>
@@ -412,10 +412,10 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
-                    _hover={{ bg: "transparent" }}
-                    _active={{ bg: "transparent" }}
+                    _hover={{bg: "transparent"}}
+                    _active={{bg: "transparent"}}
                 >
-                    <Image src={btnAdd} w="24px" h="24px" pointerEvents="none" />
+                    <Image src={btnAdd} w="24px" h="24px" pointerEvents="none"/>
                 </Button>
             </HStack>
         )
@@ -426,7 +426,7 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         return (
             <HStack h="76px" justify="space-between" align="center">
                 <HStack gap="14px" flex="1">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
                     <Box flex="1">
                         <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
                             {data.newNumber}
@@ -457,7 +457,7 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         return (
             <HStack h="76px" justify="space-between" align="center">
                 <HStack gap="14px" flex="1">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
                     <Box flex="1">
                         <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
                             {data.invitedNumber}
@@ -488,7 +488,7 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         return (
             <HStack h="76px" justify="space-between" align="center">
                 <HStack gap="14px" flex="1">
-                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none" />
+                    <Image src={avatar} w="48px" h="48px" opacity={0.7} pointerEvents="none"/>
                     <Box flex="1">
                         <Text color="#101318" fontWeight="400" fontSize="16px" mb="2px">
                             {data.invitedNumber}
@@ -510,11 +510,11 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
                         color="#22252D"
                         borderRadius="6px"
                         onClick={() => onResend(data.id)}
-                        _hover={{ bg: "#E0E0E8" }}
+                        _hover={{bg: "#E0E0E8"}}
                     >
                         Дахин илгээх
                     </Button>
-                    <Image src={btnDelete} w="24px" h="24px" pointerEvents="none" />
+                    <Image src={btnDelete} w="24px" h="24px" pointerEvents="none"/>
                 </HStack>
             </HStack>
         )
