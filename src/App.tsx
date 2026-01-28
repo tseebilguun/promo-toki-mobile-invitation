@@ -219,18 +219,22 @@ function AppContent() {
         const invite = invites.find((inv) => inv.id === id)
         if (!invite || !jwt) return
 
-        fetch(`${API_BASE_URL}/sendInvitation`, {
+        // Call /resendInvitation with UUID and msisdn
+        fetch(`${API_BASE_URL}/resendInvitation`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${jwt}`,
                 "Content-Type": "application/json",
                 Accept: "application/json",
             },
-            body: JSON.stringify({ msisdn: invite.invitedNumber }),
+            body: JSON.stringify({
+                invitationId: id,
+                msisdn: invite.invitedNumber,
+            }),
         })
             .then((res) => res.json())
             .then((response) => {
-                if (response.result === "Success") {
+                if (response.result === "Success" || response.result === "success") {
                     alert("Урилга дахин илгээгдлээ")
                     fetchInfo()
                 } else {
@@ -245,7 +249,6 @@ function AppContent() {
     const onDelete = (id: string) => {
         if (!jwt) return
 
-        // Assuming there's a DELETE endpoint - adjust if different
         fetch(`${API_BASE_URL}/deleteInvitation`, {
             method: "DELETE",
             headers: {
