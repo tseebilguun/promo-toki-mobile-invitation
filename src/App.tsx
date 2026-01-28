@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { Box, Button, Container, Drawer, HStack, Image, Input, Stack, Text } from "@chakra-ui/react"
 
 import banner from "./assets/banner.webp"
@@ -10,6 +10,9 @@ import bonus from "./assets/bonus.svg"
 const DRAG_CLOSE_DISTANCE = 60
 const DRAG_CLOSE_VELOCITY = 0.5 // px/ms
 const MAX_DRAG = 140
+
+const API_BASE_URL = "http://localhost:6989"
+// const API_BASE_URL = "http://10.21.68.222:6989"
 
 interface InviteData {
     id: string
@@ -33,42 +36,24 @@ interface ApiResponse {
     data: ApiResponseData | null
 }
 
-// Dummy API response
-const DUMMY_RESPONSE: ApiResponse = {
-    result: "Success",
-    message: "Fetched existing records",
-    data: {
-        referrals: [
-            {
-                id: "82312",
-                invitedNumber: "89115441",
-                newNumber: "55150010",
-                status: "SUCCESS",
-                operatorName: "Юнител",
-                expireDate: "2026-03-31T23:59:59",
-            },
-            {
-                id: "82313",
-                invitedNumber: "88547020",
-                newNumber: null,
-                status: "SENT",
-                operatorName: "Юнител",
-                expireDate: "2026-01-28T23:59:59",
-            },
-            {
-                id: "82314",
-                invitedNumber: "88547021",
-                newNumber: null,
-                status: "EXPIRED",
-                operatorName: "Юнител",
-                expireDate: "2026-01-12T23:59:59",
-            },
-        ],
-        hasActiveEntitlement: true,
-        successReferralsCount: 1,
-        entitlementExpirationDate: "2026-02-25T00:00:00",
-    },
+interface LoginResponse {
+    result: "success" | "fail"
+    message: string
+    data: string // JWT token
 }
+
+// Auth Context
+interface AuthContextType {
+    jwt: string | null
+    setJwt: (token: string | null) => void
+}
+
+const AuthContext = createContext<AuthContextType>({
+    jwt: null,
+    setJwt: () => {},
+})
+
+const useAuth = () => useContext(AuthContext)
 
 // Map API status to display status
 const mapStatus = (status: string): "Амжилттай" | "Урилга илгээсэн" | "Хугацаа дууссан" => {
@@ -85,6 +70,17 @@ const mapStatus = (status: string): "Амжилттай" | "Урилга илг�
 }
 
 export default function App() {
+    const [jwt, setJwt] = useState<string | null>(null)
+
+    return (
+        <AuthContext.Provider value={{ jwt, setJwt }}>
+            <AppContent />
+        </AuthContext.Provider>
+    )
+}
+
+function AppContent() {
+    const { jwt, setJwt } = useAuth()
     const [open, setOpen] = useState(false)
     const [phone, setPhone] = useState("")
     const [invites, setInvites] = useState<InviteData[]>([])
@@ -96,52 +92,92 @@ export default function App() {
 
     const isSendEnabled = useMemo(() => phone.trim().length > 0, [phone])
 
-    // Get tokiId from URL and fetch data (dummy for now)
+    // Login and fetch data
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
         const tokiId = params.get("tokiId")
+        const msisdn = params.get("msisdn")
 
-        if (!tokiId) {
-            setError("tokiId not found in URL")
+        if (!tokiId || !msisdn) {
+            setError("tokiId or msisdn not found in URL")
             setLoading(false)
             return
         }
 
-        // Simulate API call with dummy response
-        setTimeout(() => {
-            const response = DUMMY_RESPONSE
+        // Step 1: Login to get JWT
+        fetch(`${API_BASE_URL}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ msisdn, tokiId }),
+        })
+            .then((res) => res.json())
+            .then((loginData: LoginResponse) => {
+                if (loginData.result === "success" && loginData.data) {
+                    const token = loginData.data
+                    setJwt(token)
 
-            if (response.result === "Success" && response.data) {
-                setInvites(response.data.referrals)
-                setHasActiveEntitlement(response.data.hasActiveEntitlement)
-                setSuccessReferralsCount(response.data.successReferralsCount)
-                setEntitlementExpirationDate(response.data.entitlementExpirationDate)
-            } else {
-                setError(response.message || "Failed to load invites")
-            }
-            setLoading(false)
-        }, 500) // 500ms delay to simulate network
+                    return fetch(`${API_BASE_URL}/getInfo`, {
+                        method: "GET",
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            Accept: "application/json",
+                        },
+                    })
+                } else {
+                    throw new Error(loginData.message || "Login failed")
+                }
+            })
+            .then((res) => res.json())
+            .then((response: ApiResponse) => {
+                if (response.result === "Success" && response.data) {
+                    setInvites(response.data.referrals)
+                    setHasActiveEntitlement(response.data.hasActiveEntitlement)
+                    setSuccessReferralsCount(response.data.successReferralsCount)
+                    setEntitlementExpirationDate(response.data.entitlementExpirationDate)
+                } else {
+                    setError(response.message || "Failed to load invites")
+                }
+            })
+            .catch((err) => {
+                setError(err.message)
+            })
+            .finally(() => {
+                setLoading(false)
+            })
+    }, [setJwt])
 
-        // TODO: Replace with real API call later:
-        // fetch(`https://your-api.com/invites?tokiId=${tokiId}`)
-        //     .then((res) => res.json())
-        //     .then((response: ApiResponse) => {
-        //         if (response.result === "Success" && response.data) {
-        //             setInvites(response.data.referrals)
-        //             setHasActiveEntitlement(response.data.hasActiveEntitlement)
-        //             setSuccessReferralsCount(response.data.successReferralsCount)
-        //             setEntitlementExpirationDate(response.data.entitlementExpirationDate)
-        //         } else {
-        //             setError(response.message || "Failed to load invites")
-        //         }
-        //     })
-        //     .catch((err) => {
-        //         setError(err.message)
-        //     })
-        //     .finally(() => {
-        //         setLoading(false)
-        //     })
-    }, [])
+    const fetchInfo = () => {
+        if (!jwt) return
+
+        setLoading(true)
+        fetch(`${API_BASE_URL}/getInfo`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+                Accept: "application/json",
+            },
+        })
+            .then((res) => res.json())
+            .then((response: ApiResponse) => {
+                if (response.result === "Success" && response.data) {
+                    setInvites(response.data.referrals)
+                    setHasActiveEntitlement(response.data.hasActiveEntitlement)
+                    setSuccessReferralsCount(response.data.successReferralsCount)
+                    setEntitlementExpirationDate(response.data.entitlementExpirationDate)
+                } else {
+                    setError(response.message || "Failed to load invites")
+                }
+            })
+            .catch((err) => {
+                setError(err.message)
+            })
+            .finally(() => {
+                setLoading(false)
+            })
+    }
 
     const onAdd = () => setOpen(true)
 
@@ -151,15 +187,86 @@ export default function App() {
     }
 
     const onSend = () => {
-        alert(`Send invite to: ${phone}`)
+        if (!jwt || !phone) return
+
+        fetch(`${API_BASE_URL}/sendInvitation`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ msisdn: phone }),
+        })
+            .then((res) => res.json())
+            .then((response) => {
+                if (response.result === "Success") {
+                    alert("Урилга амжилттай илгээгдлээ")
+                    onClose()
+                    // Refresh data
+                    fetchInfo()
+                } else {
+                    alert(response.message || "Урилга илгээхэд алдаа гарлаа")
+                }
+            })
+            .catch((err) => {
+                alert(`Алдаа: ${err.message}`)
+            })
     }
 
     const onResend = (id: string) => {
-        alert(`Resend invitation for ID: ${id}`)
+        // Find the invitation
+        const invite = invites.find((inv) => inv.id === id)
+        if (!invite || !jwt) return
+
+        fetch(`${API_BASE_URL}/sendInvitation`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ msisdn: invite.invitedNumber }),
+        })
+            .then((res) => res.json())
+            .then((response) => {
+                if (response.result === "Success") {
+                    alert("Урилга дахин илгээгдлээ")
+                    fetchInfo()
+                } else {
+                    alert(response.message || "Урилга илгээхэд алдаа гарлаа")
+                }
+            })
+            .catch((err) => {
+                alert(`Алдаа: ${err.message}`)
+            })
     }
 
     const onDelete = (id: string) => {
-        alert(`Delete invitation for ID: ${id}`)
+        if (!jwt) return
+
+        // Assuming there's a DELETE endpoint - adjust if different
+        fetch(`${API_BASE_URL}/deleteInvitation`, {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ invitationId: id }),
+        })
+            .then((res) => res.json())
+            .then((response) => {
+                if (response.result === "Success" || response.result === "success") {
+                    alert("Урилга устгагдлаа")
+                    fetchInfo()
+                } else {
+                    alert(response.message || "Устгахад алдаа гарлаа")
+                }
+            })
+            .catch((err) => {
+                alert(`Алдаа: ${err.message}`)
+            })
     }
 
     // ---- drag refs ----
@@ -265,7 +372,6 @@ export default function App() {
                     pt="18px"
                     pb="calc(18px + env(safe-area-inset-bottom))"
                 >
-                    {/* Entitlement card - show only if hasActiveEntitlement is true */}
                     {hasActiveEntitlement && (
                         <EntitlementCard
                             expirationDate={entitlementExpirationDate}
@@ -438,7 +544,6 @@ function EntitlementCard({ expirationDate, successCount }: EntitlementCardProps)
 
     return (
         <Box bg="#22252D" borderRadius="14px" p="2px" mb="14px">
-            {/* Inner white card */}
             <Box bg="#FFFFFF" borderRadius="12px" p="14px">
                 <HStack gap="12px" mb="12px">
                     <Image src={bonus} draggable={false} pointerEvents="none" />
@@ -457,7 +562,6 @@ function EntitlementCard({ expirationDate, successCount }: EntitlementCardProps)
                 </Text>
             </Box>
 
-            {/* Bottom section - Амжилттай урьсан */}
             <HStack px="14px" py="5px" justify="space-between" align="center">
                 <Text color="#FFFFFF" fontWeight="400" fontSize="12px">
                     Амжилттай урьсан
@@ -481,7 +585,6 @@ interface InviteRowProps {
 function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
     const [countdown, setCountdown] = useState("")
 
-    // Countdown timer for "SENT" status
     useEffect(() => {
         if (data.status !== "SENT" || !data.expireDate) return
 
@@ -508,7 +611,6 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         return () => clearInterval(interval)
     }, [data.status, data.expireDate])
 
-    // Empty row
     if (!data.invitedNumber) {
         return (
             <HStack h="76px" justify="space-between">
@@ -538,7 +640,6 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         )
     }
 
-    // Success status
     if (data.status === "SUCCESS") {
         return (
             <HStack h="76px" justify="space-between" align="center">
@@ -569,7 +670,6 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         )
     }
 
-    // Invitation sent status
     if (data.status === "SENT") {
         return (
             <HStack h="76px" justify="space-between" align="center">
@@ -600,7 +700,6 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         )
     }
 
-    // Expired status
     if (data.status === "EXPIRED") {
         return (
             <HStack h="76px" justify="space-between" align="center">
@@ -631,7 +730,19 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
                     >
                         Дахин илгээх
                     </Button>
-                    <Image src={btnDelete} w="24px" h="24px" pointerEvents="none" />
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        w="24px"
+                        h="24px"
+                        minW="24px"
+                        p="0"
+                        onClick={() => onDelete(data.id)}
+                        _hover={{ bg: "transparent" }}
+                        _active={{ bg: "transparent" }}
+                    >
+                        <Image src={btnDelete} w="24px" h="24px" pointerEvents="none" />
+                    </Button>
                 </HStack>
             </HStack>
         )
