@@ -6,6 +6,7 @@ import avatar from "./assets/avatar.svg"
 import btnAdd from "./assets/btn_add.svg"
 import btnDelete from "./assets/btn_delete.svg"
 import bonus from "./assets/bonus.svg"
+import { ToastProvider, useToast } from "./components/ToastContext"
 
 const DRAG_CLOSE_DISTANCE = 60
 const DRAG_CLOSE_VELOCITY = 0.5 // px/ms
@@ -73,14 +74,17 @@ export default function App() {
     const [jwt, setJwt] = useState<string | null>(null)
 
     return (
-        <AuthContext.Provider value={{ jwt, setJwt }}>
-            <AppContent />
-        </AuthContext.Provider>
+        <ToastProvider>
+            <AuthContext.Provider value={{ jwt, setJwt }}>
+                <AppContent />
+            </AuthContext.Provider>
+        </ToastProvider>
     )
 }
 
 function AppContent() {
     const { jwt, setJwt } = useAuth()
+    const toast = useToast()
     const [open, setOpen] = useState(false)
     const [phone, setPhone] = useState("")
     const [invites, setInvites] = useState<InviteData[]>([])
@@ -143,11 +147,12 @@ function AppContent() {
             })
             .catch((err) => {
                 setError(err.message)
+                toast.showError(err.message)
             })
             .finally(() => {
                 setLoading(false)
             })
-    }, [setJwt])
+    }, [setJwt, toast])
 
     const fetchInfo = () => {
         if (!jwt) return
@@ -169,14 +174,25 @@ function AppContent() {
                     setEntitlementExpirationDate(response.data.entitlementExpirationDate)
                 } else {
                     setError(response.message || "Failed to load invites")
+                    toast.showError(response.message || "Failed to load invites")
                 }
             })
             .catch((err) => {
                 setError(err.message)
+                toast.showError(err.message)
             })
             .finally(() => {
                 setLoading(false)
             })
+    }
+
+    // Update invitation status to EXPIRED when countdown reaches 00:00:00
+    const handleExpired = (id: string) => {
+        setInvites((prevInvites) =>
+            prevInvites.map((invite) =>
+                invite.id === id ? { ...invite, status: "EXPIRED" } : invite
+            )
+        )
     }
 
     const onAdd = () => setOpen(true)
@@ -201,25 +217,22 @@ function AppContent() {
             .then((res) => res.json())
             .then((response) => {
                 if (response.result === "Success") {
-                    alert("Урилга амжилттай илгээгдлээ")
+                    toast.showSuccess(response.message)
                     onClose()
-                    // Refresh data
                     fetchInfo()
                 } else {
-                    alert(response.message || "Урилга илгээхэд алдаа гарлаа")
+                    toast.showError(response.message || "Урилга илгээхэд алдаа гарлаа")
                 }
             })
             .catch((err) => {
-                alert(`Алдаа: ${err.message}`)
+                toast.showError(`Алдаа: ${err.message}`)
             })
     }
 
     const onResend = (id: string) => {
-        // Find the invitation
         const invite = invites.find((inv) => inv.id === id)
         if (!invite || !jwt) return
 
-        // Call /resendInvitation with UUID and msisdn
         fetch(`${API_BASE_URL}/resendInvitation`, {
             method: "POST",
             headers: {
@@ -235,14 +248,14 @@ function AppContent() {
             .then((res) => res.json())
             .then((response) => {
                 if (response.result === "Success" || response.result === "success") {
-                    alert("Урилга дахин илгээгдлээ")
+                    toast.showSuccess(response.message)
                     fetchInfo()
                 } else {
-                    alert(response.message || "Урилга илгээхэд алдаа гарлаа")
+                    toast.showError(response.message || "Урилга илгээхэд алдаа гарлаа")
                 }
             })
             .catch((err) => {
-                alert(`Алдаа: ${err.message}`)
+                toast.showError(`Алдаа: ${err.message}`)
             })
     }
 
@@ -261,14 +274,14 @@ function AppContent() {
             .then((res) => res.json())
             .then((response) => {
                 if (response.result === "Success" || response.result === "success") {
-                    alert("Урилга устгагдлаа")
+                    toast.showSuccess(response.message)
                     fetchInfo()
                 } else {
-                    alert(response.message || "Устгахад алдаа гарлаа")
+                    toast.showError(response.message || "Устгахад алдаа гарлаа")
                 }
             })
             .catch((err) => {
-                alert(`Алдаа: ${err.message}`)
+                toast.showError(`Алдаа: ${err.message}`)
             })
     }
 
@@ -404,6 +417,7 @@ function AppContent() {
                                         onAdd={onAdd}
                                         onResend={onResend}
                                         onDelete={onDelete}
+                                        onExpired={handleExpired}
                                     />
                                 ))}
                             </Stack>
@@ -457,7 +471,7 @@ function AppContent() {
                                             const digitsOnly = e.target.value.replace(/\D/g, "")
                                             setPhone(digitsOnly)
                                         }}
-                                        variant="flushed"
+                                        variant="unstyled"
                                         type="tel"
                                         inputMode="numeric"
                                         autoComplete="tel"
@@ -583,9 +597,10 @@ interface InviteRowProps {
     onAdd: () => void
     onResend: (id: string) => void
     onDelete: (id: string) => void
+    onExpired: (id: string) => void
 }
 
-function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
+function InviteRow({ data, onAdd, onResend, onDelete, onExpired }: InviteRowProps) {
     const [countdown, setCountdown] = useState("")
 
     useEffect(() => {
@@ -599,6 +614,7 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
             if (diff <= 0) {
                 setCountdown("00:00:00")
                 clearInterval(interval)
+                onExpired(data.id)
             } else {
                 const hours = Math.floor(diff / (1000 * 60 * 60))
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
@@ -612,7 +628,7 @@ function InviteRow({ data, onAdd, onResend, onDelete }: InviteRowProps) {
         }, 1000)
 
         return () => clearInterval(interval)
-    }, [data.status, data.expireDate])
+    }, [data.status, data.expireDate, data.id, onExpired])
 
     if (!data.invitedNumber) {
         return (
