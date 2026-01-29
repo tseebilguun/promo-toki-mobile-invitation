@@ -12,8 +12,8 @@ const DRAG_CLOSE_DISTANCE = 60
 const DRAG_CLOSE_VELOCITY = 0.5 // px/ms
 const MAX_DRAG = 140
 
-const API_BASE_URL = "http://localhost:6989"
-// const API_BASE_URL = "http://10.21.68.222:6989"
+// const API_BASE_URL = "http://localhost:6989"
+const API_BASE_URL = "http://10.21.68.222:6989"
 
 interface InviteData {
     id: string
@@ -94,17 +94,28 @@ function AppContent() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    // Add this ref to track if login has been attempted
+    const hasAttemptedLogin = useRef(false)
+
     const isSendEnabled = useMemo(() => phone.trim().length > 0, [phone])
 
     // Login and fetch data
     useEffect(() => {
+        // Prevent multiple login attempts
+        if (hasAttemptedLogin.current) return
+        hasAttemptedLogin.current = true
+
+        let isMounted = true
+
         const params = new URLSearchParams(window.location.search)
         const tokiId = params.get("tokiId")
         const msisdn = params.get("msisdn")
 
         if (!tokiId || !msisdn) {
-            setError("tokiId or msisdn not found in URL")
-            setLoading(false)
+            if (isMounted) {
+                setError("Алдаа гарлаа. Дахин оролдоно уу.")
+                setLoading(false)
+            }
             return
         }
 
@@ -119,6 +130,8 @@ function AppContent() {
         })
             .then((res) => res.json())
             .then((loginData: LoginResponse) => {
+                if (!isMounted) return
+
                 if (loginData.result === "success" && loginData.data) {
                     const token = loginData.data
                     setJwt(token)
@@ -134,25 +147,38 @@ function AppContent() {
                     throw new Error(loginData.message || "Login failed")
                 }
             })
-            .then((res) => res.json())
+            .then((res) => {
+                if (!isMounted) return
+                return res?.json()
+            })
             .then((response: ApiResponse) => {
-                if (response.result === "Success" && response.data) {
+                if (!isMounted) return
+
+                if (response && response.result === "Success" && response.data) {
                     setInvites(response.data.referrals)
                     setHasActiveEntitlement(response.data.hasActiveEntitlement)
                     setSuccessReferralsCount(response.data.successReferralsCount)
                     setEntitlementExpirationDate(response.data.entitlementExpirationDate)
-                } else {
+                } else if (response) {
                     setError(response.message || "Failed to load invites")
                 }
             })
             .catch((err) => {
-                setError(err.message)
-                toast.showError(err.message)
+                if (isMounted) {
+                    setError(err.message)
+                    toast.showError(err.message)
+                }
             })
             .finally(() => {
-                setLoading(false)
+                if (isMounted) {
+                    setLoading(false)
+                }
             })
-    }, [setJwt, toast])
+
+        return () => {
+            isMounted = false
+        }
+    }, []) // ← Removed setJwt and toast from dependencies
 
     const fetchInfo = () => {
         if (!jwt) return
@@ -409,7 +435,7 @@ function AppContent() {
                                 <Text color="#E53E3E">{error}</Text>
                             </Box>
                         ) : (
-                            <Stack gap="0">
+                            <Stack gap="0px">
                                 {displayRows.map((row) => (
                                     <InviteRow
                                         key={row.id}
@@ -471,7 +497,7 @@ function AppContent() {
                                             const digitsOnly = e.target.value.replace(/\D/g, "")
                                             setPhone(digitsOnly)
                                         }}
-                                        variant="unstyled"
+                                        variant="flushed"
                                         type="tel"
                                         inputMode="numeric"
                                         autoComplete="tel"
@@ -486,6 +512,19 @@ function AppContent() {
                                         h="auto"
                                         minH="0"
                                         display="block"
+                                        border="none"
+                                        borderRadius="0"
+                                        _hover={{ borderBottom: "none" }}
+                                        _focus={{
+                                            borderBottom: "none",
+                                            boxShadow: "none",
+                                            outline: "none"
+                                        }}
+                                        _focusVisible={{
+                                            borderBottom: "none",
+                                            boxShadow: "none",
+                                            outline: "none"
+                                        }}
                                         style={{ textIndent: 0 }}
                                     />
                                 </Box>

@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Text } from "@chakra-ui/react"
+import { Box, HStack, IconButton, Image, Text } from "@chakra-ui/react"  // ← Added Image
 
 import iconAlert from "../assets/toast/icon_alert.svg"
 import iconCheck from "../assets/toast/icon_check.svg"
@@ -66,8 +66,7 @@ const ToastItem = ({ toast, onClose }: ToastItemProps) => {
                     justifyContent="center"
                     flexShrink={0}
                 >
-                    <Box
-                        as="img"
+                    <Image
                         src={isError ? iconAlert : iconCheck}
                         alt={isError ? "Alert" : "Success"}
                         w="24px"
